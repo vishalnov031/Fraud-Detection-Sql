@@ -1,0 +1,124 @@
+/* ============================================
+   Project: Fraud Detection Using SQL
+   Author: Vishal Kumar Jha
+   Database: MySQL / PostgreSQL
+   Description:
+   Rule-based fraud detection queries
+   ============================================ */
+
+-- 1. Total transactions per user
+SELECT user_id, COUNT(*) AS total_transactions
+FROM transactions
+GROUP BY user_id;
+
+-- 2. High-value transactions
+SELECT *
+FROM transactions
+WHERE amount > 50000;
+
+-- 3. Average transaction amount per user
+SELECT user_id, AVG(amount) AS avg_amount
+FROM transactions
+GROUP BY user_id;
+
+-- 4. Transaction amount > 3× user average
+SELECT t.transaction_id, t.user_id, t.amount, a.avg_amount
+FROM transactions t
+JOIN (
+    SELECT user_id, AVG(amount) AS avg_amount
+    FROM transactions
+    GROUP BY user_id
+) a ON t.user_id = a.user_id
+WHERE t.amount > a.avg_amount * 3;
+
+-- 5. More than 5 transactions in a single day
+SELECT user_id, DATE(transaction_date) AS txn_date, COUNT(*) AS txn_count
+FROM transactions
+GROUP BY user_id, DATE(transaction_date)
+HAVING COUNT(*) > 5;
+
+--6. Multiple transactions within 10 minutes
+SELECT t1.user_id, COUNT(*) AS rapid_txns
+FROM transactions t1
+JOIN transactions t2
+ON t1.user_id = t2.user_id
+AND ABS(TIMESTAMPDIFF(MINUTE, t1.transaction_date, t2.transaction_date)) <= 10
+AND t1.transaction_id <> t2.transaction_id
+GROUP BY t1.user_id
+HAVING COUNT(*) >= 5;
+
+--7. Same user, different countries in 1 hour
+SELECT DISTINCT t1.user_id
+FROM transactions t1
+JOIN transactions t2
+ON t1.user_id = t2.user_id
+AND t1.country <> t2.country
+AND ABS(TIMESTAMPDIFF(MINUTE, t1.transaction_date, t2.transaction_date)) <= 60;
+
+--8. Transactions from non-home country
+SELECT t.*
+FROM transactions t
+JOIN users u ON t.user_id = u.user_id
+WHERE t.country <> u.country;
+
+-- 9. Repeated small transactions (< ₹200)
+SELECT user_id, COUNT(*) AS small_txn_count
+FROM transactions
+WHERE amount < 200
+GROUP BY user_id
+HAVING COUNT(*) >= 5;
+
+-- 10. Sudden spike in daily spending
+SELECT user_id, DATE(transaction_date) AS txn_date, SUM(amount) AS daily_spend
+FROM transactions
+GROUP BY user_id, DATE(transaction_date)
+HAVING SUM(amount) > 100000;
+
+-- 11. New accounts doing high-value transactions
+SELECT t.user_id, t.amount, u.account_created
+FROM transactions t
+JOIN users u ON t.user_id = u.user_id
+WHERE DATEDIFF(t.transaction_date, u.account_created) <= 7
+AND t.amount > 50000;
+
+-- 12. Top 5% transactions by amount
+SELECT *
+FROM (
+    SELECT *,
+           NTILE(20) OVER (ORDER BY amount DESC) AS percentile
+    FROM transactions
+) x
+WHERE percentile = 1;
+
+-- 13. Multiple merchants in short time
+SELECT user_id, COUNT(DISTINCT merchant) AS merchant_count
+FROM transactions
+WHERE transaction_date >= NOW() - INTERVAL 1 HOUR
+GROUP BY user_id
+HAVING COUNT(DISTINCT merchant) >= 5;
+
+-- 14. Fraud risk score per user
+SELECT
+    user_id,
+    SUM(
+        CASE
+            WHEN amount > 50000 THEN 3
+            WHEN amount BETWEEN 20000 AND 50000 THEN 2
+            WHEN amount < 200 THEN 1
+            ELSE 0
+        END
+    ) AS risk_score
+FROM transactions
+GROUP BY user_id
+HAVING risk_score >= 5;
+
+-- 15. SELECT DISTINCT user_id
+FROM transactions
+WHERE amount > 50000
+   OR user_id IN (
+       SELECT user_id
+       FROM transactions
+       GROUP BY user_id
+       HAVING COUNT(*) > 10
+   );
+
