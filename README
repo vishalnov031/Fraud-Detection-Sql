@@ -1,0 +1,25 @@
+# Fraud Detection Using SQL
+
+## 📌 Project Overview
+This project detects potentially fraudulent transactions using
+rule-based SQL logic commonly used in banking and fintech.
+
+## 🛠 Tools Used
+- SQL (MySQL / PostgreSQL)
+- GitHub
+
+## 📂 Project Structure
+- schema.sql → database tables
+- sample_data.sql → mock transaction data
+- fraud_detection_queries.sql → fraud rules
+- insights.md → findings & conclusions
+
+## 🔍 Fraud Rules Implemented
+1. High-value transaction detection  
+2. Velocity fraud (rapid transactions)  
+3. Geographic anomaly detection  
+4. Small amount card testing  
+5. Risk scoring model  
+
+## 🎯 Key Outcome
+Identified high-risk users based on transaction patterns using SQL only.
